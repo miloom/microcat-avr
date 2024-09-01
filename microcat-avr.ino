@@ -58,17 +58,11 @@ void loop() {
 
   main_loop_counter++;
 
-  for (uint8_t motorNum = 0; motorNum < (uint8_t)MotorNum::COUNT; motorNum++) {
+  for (uint8_t motorNum = 0; motorNum < static_cast<uint8_t>(MotorNum::COUNT); motorNum++) {
     motor[motorNum].update();
-    if (false) {
-      Serial.print(motorNum);
-      Serial.print(": ");
-      Serial.print(feedback_chipselect_pins[motorNum]);
-      Serial.print(" ");
-      Serial.println(motor[motorNum].servo_position);
-    }
-    sendEncoderData(motorNum, motor[motorNum].servo_position);
+    sendEncoderData(motorNum, static_cast<int16_t>(motor[motorNum].servo_position));
   }
+
 
   if ((main_loop_counter % (uint32_t)(MAIN_LOOP_FREQ / HEARTBEAT_FREQ)) == 0) { // every 100 main loop iterations (once every second): red LED blinking
     digitalWrite(LED, !digitalRead(LED));

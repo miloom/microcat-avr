@@ -1,2 +1,7 @@
 # Python virtual environment directory
 .venv
+
+# CLion helpers
+cmake-build-debug
+cmake-build-release
+CMakeLists.txt
