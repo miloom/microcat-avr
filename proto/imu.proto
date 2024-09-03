@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+package imu;
+
 message GyroData {
   float x = 1;
   float y = 2;

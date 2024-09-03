@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+package encoder;
+
 enum Location {
   FRONT_RIGHT = 0;
   BACK_RIGHT = 1;
