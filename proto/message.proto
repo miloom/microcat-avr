@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package message;
+
+import "encoder.proto";
+import "imu.proto";
+
+message Message {
+  oneof data {
+    encoder.Data encoder = 1;
+    imu.Telemetry telemetry = 2;
+  }
+}

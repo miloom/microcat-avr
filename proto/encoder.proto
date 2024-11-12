@@ -9,7 +9,7 @@ enum Location {
   FRONT_LEFT = 3;
 }
 
-message EncoderData {
+message Data {
   Location location = 1;
   sint32 position = 2;
 }
