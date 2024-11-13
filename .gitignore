@@ -1,5 +1,6 @@
 # Python virtual environment directory
 .venv
+.vscode
 
 # CLion helpers
 cmake-build-debug

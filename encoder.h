@@ -8,7 +8,7 @@ class Encoder {
   public:
     void update();
     void initialize(byte motor_num);
-    int32_t servo_position{0};
+    uint32_t servo_position{0};
     bool reversed_sense{false};
 
   private:

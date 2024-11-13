@@ -15,11 +15,18 @@ enum class MotorNum : uint8_t {
   FRONT_LEFT,
   COUNT
 };
+// motor settings
+// #define CALIBRATE_MOTORS
+constexpr float MAX_SERVO_SPEED = 40;
+constexpr float RADIANS_PER_TICK = 0.006135923f;// 2pi/1024 motor encoder conversion units
 constexpr uint8_t MOTOR_POWER_EN = A3;
       
+const int8_t reversed_rotation[(uint64_t)MotorNum::COUNT] = {1, 1, 1, -1};    // invert positive rotation direction for left motors (2,3)
+const uint8_t motor_i2c_addresses[(uint64_t)MotorNum::COUNT] = {0x63, 0x60, 0x64, 0x61};
 
-constexpr int reversed_sensing[(uint64_t)MotorNum::COUNT] = { -1, -1, -1, -1};
-constexpr byte feedback_chipselect_pins[(uint64_t)MotorNum::COUNT] = {7, 8, 9, 10};
+constexpr int reversed_sensing[(uint64_t)MotorNum::COUNT] = { 0, 0, 1, 0};
+constexpr uint8_t feedback_chipselect_pins[(uint64_t)MotorNum::COUNT] = {7, 10, 9, 8};
+constexpr int32_t calibrated_zeros[(uint64_t)MotorNum::COUNT] = {188, 161, 726, 356};
 
 // battery measurement settings
 constexpr uint8_t BATTERY = A2;
@@ -44,4 +51,6 @@ constexpr float HEARTBEAT_FREQ = 10.f;           // Hz
 constexpr float PRESSURE_READ_FREQ = 10.f;          // Hz
 constexpr float BATTERY_READ_FREQ = 10.f;          // Hz
 constexpr float BEACON_READ_FREQ = 10.f;          // Hz
+
+
 
