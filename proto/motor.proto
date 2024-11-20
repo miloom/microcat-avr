@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package motor;
+
+message MotorTarget {
+  float target_position = 1;
+  float amplitude = 2;
+  float frequency = 3;
+}

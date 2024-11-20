@@ -4,10 +4,12 @@ package message;
 
 import "encoder.proto";
 import "imu.proto";
+import "motor.proto";
 
 message Message {
   oneof data {
     encoder.Data encoder = 1;
     imu.Telemetry telemetry = 2;
+    motor.MotorTarget motor = 3;
   }
 }

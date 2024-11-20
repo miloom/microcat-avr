@@ -6,6 +6,7 @@
 #include "../nanopb/pb.h"
 #include "encoder.pb.h"
 #include "imu.pb.h"
+#include "motor.pb.h"
 
 #if PB_PROTO_HEADER_VERSION != 40
 #error Regenerate this file with the current version of nanopb generator.
@@ -17,6 +18,7 @@ typedef struct message_message {
     union {
         encoder_data_t encoder;
         imu_telemetry_t telemetry;
+        motor_motor_target_t motor;
     } data;
 } message_message_t;
 
@@ -32,15 +34,18 @@ extern "C" {
 /* Field tags (for use in manual encoding/decoding) */
 #define MESSAGE_MESSAGE_ENCODER_TAG              1
 #define MESSAGE_MESSAGE_TELEMETRY_TAG            2
+#define MESSAGE_MESSAGE_MOTOR_TAG                3
 
 /* Struct field encoding specification for nanopb */
 #define MESSAGE_MESSAGE_FIELDLIST(X, a) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (data,encoder,data.encoder),   1) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (data,telemetry,data.telemetry),   2)
+X(a, STATIC,   ONEOF,    MESSAGE,  (data,telemetry,data.telemetry),   2) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (data,motor,data.motor),   3)
 #define MESSAGE_MESSAGE_CALLBACK NULL
 #define MESSAGE_MESSAGE_DEFAULT NULL
 #define message_message_t_data_encoder_MSGTYPE encoder_data_t
 #define message_message_t_data_telemetry_MSGTYPE imu_telemetry_t
+#define message_message_t_data_motor_MSGTYPE motor_motor_target_t
 
 extern const pb_msgdesc_t message_message_t_msg;
 

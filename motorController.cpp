@@ -12,7 +12,6 @@ void MotorController::init(uint8_t motor_num) {
     amplitude = 300.0;
     phase_offset = 0;
     encoder.initialize(motor_num);
-    DEBUG_LOG("%d: %d %d", motor_num, feedback_chipselect_pins[motor_num], encoder.servo_position);
 }
 
 int32_t MotorController::update()
@@ -30,13 +29,6 @@ int32_t MotorController::update()
     // calculate shortest_path as the shortest distance between desired_position and servo_position.
     int32_t shortest_path = (desired_position - encoder.servo_position) % 1024;
 
-    Serial.print("Temp time: ");
-    Serial.println(temp_time, 4);
-    Serial.print("Generated xt: ");
-    Serial.println(gen_xt, 4);
-    DEBUG_LOG("Desired position: %d", desired_position);
-    DEBUG_LOG("Initial shortest path: %d", shortest_path);
-
     // shortest path is always in the -512...511 range. ensures correct direction of rotation
     // avoid multiple turns of the motor
     while (shortest_path > 511) {
@@ -45,8 +37,6 @@ int32_t MotorController::update()
     while (shortest_path < -512) {
         shortest_path += 1024;
     }
-
-    DEBUG_LOG("Final shortest path: %d", shortest_path);
 
     move(shortest_path);
     return encoder.servo_position;

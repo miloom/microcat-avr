@@ -26,6 +26,8 @@ void setup() {
 
   Wire.begin();
   Serial.begin(SERIAL_SPEED);
+  Serial.setTimeout(20);  // Timeout needs to be low enough that the wdg doesn't reset the CPU
+  DEBUG_LOG("Starting...");
 
   SPI.begin();
   SPI.setDataMode(SPI_MODE3);
@@ -62,7 +64,7 @@ void loop() {
   wdt_reset ();
 
   main_loop_counter++;
-
+/*
   for (uint8_t motorNum = 0; motorNum < static_cast<uint8_t>(MotorNum::COUNT); motorNum++) {
     if (motorNum == 2) {
     int32_t servo_position = motors[motorNum].update();
@@ -72,8 +74,10 @@ void loop() {
     DEBUG_LOG("motor%d(%x): %d", motorNum, motor_i2c_addresses[motorNum], servo_position);
     }
   }
+ 
+ */
 
-
+  readSerial();
 
   if ((main_loop_counter % (uint32_t)(MAIN_LOOP_FREQ / HEARTBEAT_FREQ)) == 0) { // every 100 main loop iterations (once every second): red LED blinking
     digitalWrite(LED, !digitalRead(LED));
