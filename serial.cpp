@@ -3,7 +3,7 @@
 #include <Arduino.h>
 
 #include <string.h>
-#include <assert.h>
+#include <src/nanopb/pb_decode.h>
 
 #include "log.h"
 
@@ -13,34 +13,34 @@
 #include "src/nanopb/pb_encode.h"
 
 
-bool receivePacket(uint8_t* data, size_t dataSize);
+size_t receivePacket(uint8_t *data, size_t dataSize);
 
-void sendEncoderData(uint8_t location, int16_t position) {
-  uint8_t buffer[MESSAGE_MESSAGE_SIZE];
-  message_message_t msg = MESSAGE_MESSAGE_INIT_DEFAULT;
-  pb_ostream_t stream = pb_ostream_from_buffer(buffer, sizeof(buffer));
-  msg.which_data = MESSAGE_MESSAGE_ENCODER_TAG;
-  msg.data.encoder.location = (encoder_location_t)location;
-  msg.data.encoder.position = position;
-  bool status = pb_encode(&stream, MESSAGE_MESSAGE_FIELDS, &msg);
+void sendEncoderData(uint8_t location, const int16_t position) {
+    uint8_t buffer[MESSAGE_MESSAGE_SIZE];
+    message_message_t msg = MESSAGE_MESSAGE_INIT_DEFAULT;
+    pb_ostream_t stream = pb_ostream_from_buffer(buffer, sizeof(buffer));
+    msg.which_data = MESSAGE_MESSAGE_ENCODER_TAG;
+    msg.data.encoder.location = static_cast<encoder_location_t>(location);
+    msg.data.encoder.position = position;
+    const bool status = pb_encode(&stream, MESSAGE_MESSAGE_FIELDS, &msg);
 
-  size_t msg_len = stream.bytes_written;
-  if (!status) {
-    return;
-  }
-  sendData(buffer, msg_len);
+    const size_t msg_len = stream.bytes_written;
+    if (!status) {
+        return;
+    }
+    sendData(buffer, msg_len);
 }
 
 void sendData(uint8_t data[], const size_t len) {
-  uint8_t encoded[static_cast<int>(len / 256) + 2 + len] = {0};
-  const auto result = cobs_encode(encoded, sizeof(encoded), data, len);
+    uint8_t encoded[static_cast<int>(len / 256) + 2 + len] = {0};
+    const auto result = cobs_encode(encoded, sizeof(encoded), data, len);
 
-  if (result.status == COBS_ENCODE_OK) {
-    Serial.write(encoded, result.out_len + 1);
-  } else {
-    constexpr uint8_t error_data[] = {0};
-    Serial.write(error_data, sizeof(error_data));
-  }
+    if (result.status == COBS_ENCODE_OK) {
+        Serial.write(encoded, result.out_len + 1);
+    } else {
+        constexpr uint8_t error_data[] = {0};
+        Serial.write(error_data, sizeof(error_data));
+    }
 }
 
 static bool initializedSerial = false;
@@ -49,37 +49,34 @@ static size_t decodedLength = 0;
 
 // data: Output buffer for the decoded packet. The buffer needs to be at least MESSAGE_MESSAGE_SIZE length.
 // Will only decode input data into a single packet at a time. When returning false, no packet has been decoded.
-bool receivePacket(uint8_t* data, size_t dataSize) {
+size_t receivePacket(uint8_t *data, const size_t dataSize) {
     if (dataSize < MESSAGE_MESSAGE_SIZE + 2) {
-        return false; // Ensure the output buffer is large enough
+        return 0; // Ensure the output buffer is large enough
     }
 
     uint8_t readData[MESSAGE_MESSAGE_SIZE + 2] = {0};
-    size_t amountRead = Serial.readBytes(readData, MESSAGE_MESSAGE_SIZE );
-    if (amountRead != 0) {
-        DEBUG_LOG("Read %d bytes", static_cast<uint8_t>(amountRead));
-
-      }
-    if (amountRead == 0) {return false;} // No data read
+    const size_t amountRead = Serial.readBytes(readData, MESSAGE_MESSAGE_SIZE);
+    if (amountRead == 0) { return false; } // No data read
 
     if (!initializedSerial) {
-        int lastZeroIndex = -1;
+        int32_t lastZeroIndex = -1;
         for (size_t i = 0; i < amountRead; ++i) {
             if (readData[i] == 0) {
                 lastZeroIndex = i;
             }
         }
 
-        if (lastZeroIndex != -1) { // Found a 0 byte
-            DEBUG_LOG("Found 0");
-            size_t startIndex = lastZeroIndex + 1;
+        if (lastZeroIndex != -1) {
+            // Found a 0 byte
+            DEBUG_LOG("Found first zero");
+            const size_t startIndex = lastZeroIndex + 1;
             if (startIndex < amountRead) {
-                size_t bytesToCopy = amountRead - startIndex;
+                const size_t bytesToCopy = amountRead - startIndex;
                 memcpy(previousData, readData + startIndex, bytesToCopy);
                 decodedLength = bytesToCopy;
             }
             initializedSerial = true;
-            return false;
+            return 0;
         }
     } else {
         int firstZeroIndex = -1;
@@ -90,21 +87,23 @@ bool receivePacket(uint8_t* data, size_t dataSize) {
             }
         }
 
-        if (firstZeroIndex != -1) { // Found a 0 byte
-            size_t copyLength = firstZeroIndex;
+        if (firstZeroIndex != -1) {
+            // Found a 0 byte
+            const size_t copyLength = firstZeroIndex;
             if (decodedLength + copyLength <= MESSAGE_MESSAGE_SIZE + 2) {
                 // Append to previousData using memcpy
                 memcpy(previousData + decodedLength, readData, copyLength);
 
                 // Copy the complete packet to the output data buffer
                 memcpy(data, previousData, decodedLength + copyLength);
-
+                const size_t temp = decodedLength + copyLength;
                 decodedLength = 0;
-                return true;
+                return temp;
             } else {
+                DEBUG_LOG("Too much data before zero byte");
                 // Handle overflow error
                 decodedLength = 0;
-                return false;
+                return 0;
             }
         } else {
             // Append the entire readData to previousData
@@ -112,32 +111,115 @@ bool receivePacket(uint8_t* data, size_t dataSize) {
                 memcpy(previousData + decodedLength, readData, amountRead);
                 decodedLength += amountRead;
             } else {
+                DEBUG_LOG("Too much data without zero byte");
                 // Handle overflow error
                 decodedLength = 0;
             }
-            return false;
+            return 0;
         }
     }
 
-    return false; // Default case
+    return 0; // Default case
 }
 
-
-void readSerial() {
-
-  uint8_t data[MESSAGE_MESSAGE_SIZE + 2];
-  if (receivePacket(data, sizeof(data))) {
-    uint8_t cobsDecoded[MESSAGE_MESSAGE_SIZE + 2];
-    auto status = cobs_decode(cobsDecoded, sizeof(cobsDecoded), data, sizeof(data));
-    if (status.status == COBS_DECODE_OK) {
-      DEBUG_LOG("Success decode");
-
-    } else {
-      DEBUG_LOG("Failed to decode cobs data %d", static_cast<uint8_t>(status.status));
+// Will return true if we were successful in decoding the message
+bool pbDecode(const uint8_t *data, const size_t dataSize, message_message_t *msg) {
+    if (data == NULL || dataSize == 0 || msg == NULL) {
+        DEBUG_LOG("Invalid input parameters to pbDecode");
+        return false;
     }
 
+    /* Initialize the message structure */
+    *msg = MESSAGE_MESSAGE_INIT_ZERO;
 
-  } else {
-    // DEBUG_LOG("No packet decoded");
-  }
+    /* Create a stream that reads from the buffer */
+    pb_istream_t stream = pb_istream_from_buffer(data, dataSize);
+
+    /* Decode the message */
+    const bool status = pb_decode(&stream, MESSAGE_MESSAGE_FIELDS, msg);
+
+    if (!status) {
+        DEBUG_LOG("Failed to decode message: %s", PB_GET_ERROR(&stream));
+        return false;
+    }
+
+    return true;
 }
+/*
+            switch (msg.which_data) {
+                case MESSAGE_MESSAGE_ENCODER_TAG: {
+                    DEBUG_LOG("Encoder message");
+                    break;
+                }
+                case MESSAGE_MESSAGE_MOTOR_TAG: {
+                    DEBUG_LOG("Motor message");
+                    DEBUG_LOG("Amplitude %d Frequency: %d Target Direction: %d", static_cast<int>(msg.data.motor.amplitude), static_cast<int>(msg.data.motor.frequency), static_cast<int>(msg.data.motor.target_position));
+                    switch (msg.data.motor.location) {
+                        case MOTOR_LOCATION_FRONT_RIGHT: {
+                            motors[static_cast<uint64_t>(MotorNum::FRONT_RIGHT)].setTarget(msg.data.motor.frequency, msg.data.motor.amplitude, msg.data.motor.target_position);
+                            break;
+                        }
+                        case MOTOR_LOCATION_FRONT_LEFT: {
+                            motors[static_cast<uint64_t>(MotorNum::FRONT_LEFT)].setTarget(msg.data.motor.frequency, msg.data.motor.amplitude, msg.data.motor.target_position);
+                            break;
+                        }
+                        case MOTOR_LOCATION_BACK_RIGHT: {
+                            motors[static_cast<uint64_t>(MotorNum::BACK_RIGHT)].setTarget(msg.data.motor.frequency, msg.data.motor.amplitude, msg.data.motor.target_position);
+
+                        break;}
+                        case MOTOR_LOCATION_BACK_LEFT: {
+                            DEBUG_LOG("Back left motor");
+                            motors[static_cast<uint64_t>(MotorNum::BACK_LEFT)].setTarget(msg.data.motor.frequency, msg.data.motor.amplitude, msg.data.motor.target_position);
+                            break;
+                        }
+                        default:
+                            DEBUG_LOG("Invalid location");
+
+                    }
+                    break;
+                }
+                case MESSAGE_MESSAGE_TELEMETRY_TAG: {
+                    DEBUG_LOG("Telemetry message");
+                    break;
+                }
+                default: {
+                    DEBUG_LOG("Unknown message type");
+                }
+            }
+            */
+
+void readSerial(MotorController motors[static_cast<uint64_t>(MotorNum::COUNT)]) {
+    uint8_t data[MESSAGE_MESSAGE_SIZE + 2];
+    const size_t len = receivePacket(data, sizeof(data));
+
+    if (len > sizeof(data)) {
+        DEBUG_LOG("Received packet length exceeds buffer size");
+        return;
+    }
+
+    if (len != 0) {
+        uint8_t cobsDecoded[MESSAGE_MESSAGE_SIZE + 2];
+        const auto status = cobs_decode(cobsDecoded, sizeof(cobsDecoded), data, len);
+
+        if (status.status == COBS_DECODE_OK) {
+            if (len > 1) {
+                message_message_t msg = MESSAGE_MESSAGE_INIT_ZERO;
+                if (!pbDecode(cobsDecoded, len - 1, &msg)) {
+                    DEBUG_LOG("Protocol buffer decoding failed");
+                }
+            } else {
+                DEBUG_LOG("Invalid packet length for decoding");
+            }
+        } else {
+            DEBUG_LOG("Failed to decode COBS data: %d", static_cast<uint8_t>(status.status));
+
+            for (size_t i = 0; i < min(len, sizeof(data)); i++) {
+                DEBUG_LOG_NO_EOL("%02X ", data[i]);
+            }
+            DEBUG_LOG("\n");
+        }
+    } else {
+        DEBUG_LOG("No packet decoded");
+    }
+}
+

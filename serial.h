@@ -1,9 +1,9 @@
 #pragma once
 
 #include <stdint.h>
-#include <stddef.h>
+#include "motorController.h"
 
-void readSerial();
+void readSerial(MotorController motors[static_cast<uint64_t>(MotorNum::COUNT)]);
 
 void sendEncoderData(uint8_t location, int16_t position);
 

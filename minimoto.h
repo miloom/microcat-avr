@@ -43,7 +43,7 @@ class MiniMoto
     void brake();
     byte getFault();
   private:
-    void I2CWriteBytes(byte addr, byte *buffer, byte len);
+    void I2CWriteBytes(byte addr, const byte *buffer, byte len) const;
     void I2CReadBytes(byte addr, byte *buffer, byte len);
-    byte _addr;
+    byte _addr{};
 };

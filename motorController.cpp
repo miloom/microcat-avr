@@ -18,16 +18,16 @@ int32_t MotorController::update()
 {
     // calculate generalized angular position based on amplitude, frequency and phase_offset
     // you can use the function millis() to get current time in milliseconds
-    float temp_time = static_cast<float>(fmod(static_cast<double>(millis())/1000.0 , 1.0/frequency )); // calculate time step for phase
-    float gen_xt = (amplitude/2.0) * sin(2.0*PI*frequency*temp_time + phase_offset*RADIANS_PER_TICK);
+    const auto temp_time = static_cast<float>(fmod(static_cast<double>(millis())/1000.0 , 1.0/frequency )); // calculate time step for phase
+    const auto gen_xt = static_cast<float>(amplitude/2.0 * sin(2.0*PI*frequency*temp_time + phase_offset*RADIANS_PER_TICK));
     // calculate the individual motor's desired_position given gen_xt, zero_direction and calibrated_zeros
     // use the reversed_rotation matrix to correctly orient all motors
-    int32_t desired_position = reversed*(zero_direction + gen_xt) - calibrated_zero;
+    auto desired_position = static_cast<int32_t>(reversed*(static_cast<float>(zero_direction) + gen_xt) - static_cast<float>(calibrated_zero));
     desired_position %= 1024; // avoid extra turns of the actuator
 
     encoder.update();
     // calculate shortest_path as the shortest distance between desired_position and servo_position.
-    int32_t shortest_path = (desired_position - encoder.servo_position) % 1024;
+    auto shortest_path = static_cast<int16_t>((desired_position - encoder.servo_position) % 1024);
 
     // shortest path is always in the -512...511 range. ensures correct direction of rotation
     // avoid multiple turns of the motor
@@ -39,7 +39,7 @@ int32_t MotorController::update()
     }
 
     move(shortest_path);
-    return encoder.servo_position;
+    return static_cast<int32_t>(encoder.servo_position);
 }
 
 void MotorController::move(int16_t movement)
@@ -49,4 +49,10 @@ void MotorController::move(int16_t movement)
   movement = max(movement, -MAX_SERVO_SPEED);
 
   motor.drive(movement);
+}
+
+void MotorController::setTarget(const float frequency, const float amplitude, const float target_direction) {
+    this->frequency = frequency;
+    this->amplitude = amplitude;
+    this->target_direction = target_direction;
 }

@@ -64,20 +64,19 @@ void loop() {
   wdt_reset ();
 
   main_loop_counter++;
-/*
+//   DEBUG_LOG("main_loop_counter = %llu", main_loop_counter);
+
   for (uint8_t motorNum = 0; motorNum < static_cast<uint8_t>(MotorNum::COUNT); motorNum++) {
     if (motorNum == 2) {
-    int32_t servo_position = motors[motorNum].update();
-    #if !DEBUG
-    sendEncoderData(motorNum, static_cast<int16_t>(servo_position));
-    #endif
-    DEBUG_LOG("motor%d(%x): %d", motorNum, motor_i2c_addresses[motorNum], servo_position);
+//    int32_t servo_position = motors[motorNum].update();
+//    DEBUG_LOG("motor%d(%x): %ld", motorNum, motor_i2c_addresses[motorNum], servo_position);
+    motors[motorNum].setTarget(0.1f, 300.0f, 20.0f);
     }
   }
  
- */
 
-  readSerial();
+
+  readSerial(motors);
 
   if ((main_loop_counter % (uint32_t)(MAIN_LOOP_FREQ / HEARTBEAT_FREQ)) == 0) { // every 100 main loop iterations (once every second): red LED blinking
     digitalWrite(LED, !digitalRead(LED));
@@ -95,5 +94,5 @@ ISR(TIMER1_COMPA_vect) {    // timer compare interrupt service routine
 }
 
 void serialEvent() {
- readSerial(); 
+ readSerial(motors);
 }
